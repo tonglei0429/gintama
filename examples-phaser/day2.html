@@ -1,0 +1,103 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>万事屋-Phaser.js-Day2</title>
+</head>
+<body>
+  <h1>学习用phaser.js开发游戏－第二天</h1>
+  <div id="game"></div>
+
+  <script type="text/javascript" src="../libs/phaser.min.js"></script>
+  <script type="text/javascript">
+    var game = new Phaser.Game(640, 480, Phaser.CANVAS, 'game', { init:init, preload: preload, create: create, update: update });
+    var platforms, player, sky;
+    var jumpTimer = 0;
+
+    function init() {
+      game.world.resize(640, 2000);
+      game.physics.startSystem(Phaser.Physics.ARCADE);
+      game.physics.arcade.gravity.y = 800;
+    }
+
+    function preload() {
+      this.load.image('trees', 'assets/trees.png');
+      this.load.image('clouds', 'assets/clouds.png');
+      game.load.image('background', 'assets/background.png');
+      game.load.image('grass-platform', 'assets/grass-platform.png');
+      game.load.image('ice-platform', 'assets/ice-platform.png');
+      game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+    }
+
+    function create() {
+      //game.add.sprite(0, 0, 'background');
+
+      game.stage.backgroundColor = '#2f9acc';
+      sky = this.add.tileSprite(0, 0, 640, 480, 'clouds');
+      sky.fixedToCamera = true;
+      game.add.sprite(0, 1906, 'trees');
+
+      platforms = this.add.physicsGroup();
+
+      platforms.create(0, 1584, 'ice-platform');
+      platforms.create(200, 1700, 'grass-platform');
+      platforms.create(400, 1816, 'ice-platform');
+      platforms.create(600, 1932, 'grass-platform');
+
+      platforms.setAll('body.allowGravity', false);
+      platforms.setAll('body.immovable', true);
+      platforms.setAll('body.velocity.x', 100);
+
+      player = game.add.sprite(320, 1952, 'dude');
+      game.physics.arcade.enable(player);
+
+      player.body.collideWorldBounds = true;
+      player.body.setSize(20, 32, 5, 16);
+
+      player.animations.add('left', [0, 1, 2, 3], 10, true);
+      player.animations.add('turn', [4], 20, true);
+      player.animations.add('right', [5, 6, 7, 8], 10, true);
+
+      game.cursors = game.input.keyboard.createCursorKeys();
+
+      game.camera.follow(player);
+    }
+
+    function update() {
+      sky.tilePosition.y = -(game.camera.y * 0.7);
+
+      platforms.forEach(function(platform) {
+        if(platform.body.velocity.x < 0 && platform.x <= -160) platform.x = 640;
+        if(platform.body.velocity.x > 0 && platform.x >= 640) platform.x = -160;
+      }, game);
+      game.physics.arcade.collide(player, platforms, onCollided, null, this);
+
+      var standing = player.body.blocked.down || player.body.touching.down;
+      player.body.velocity.x = 0;
+
+      if (game.cursors.left.isDown) {
+        player.body.velocity.x = -200;
+        player.play('left');
+      }
+      else if (game.cursors.right.isDown) {
+        player.body.velocity.x = 200;
+        player.play('right');
+      }
+      else {
+        player.animations.stop();
+      }
+
+      if (standing && game.cursors.up.isDown && game.time.time > jumpTimer) {
+          player.body.velocity.y = -500;
+          jumpTimer = game.time.time + 750;
+      }
+    }
+
+    function onCollided(player, platform) {
+      if (platform.key === 'ice-platform') {
+          player.body.x -= platform.body.x - platform.body.prev.x;
+      }
+    }
+  </script>
+</body>
+</html>
